@@ -1,4 +1,5 @@
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class ImageEditorModel {
@@ -6,9 +7,11 @@ public class ImageEditorModel {
     // private Image inputImage;
     private ImageEditor editor;
     private List<Image> history;
+    private List<String> filterNames;
 
     public ImageEditorModel() {
         this.history = new ArrayList<>();
+        this.filterNames = new ArrayList<>();
     }
 
     public String getInputFileName() {
@@ -20,12 +23,49 @@ public class ImageEditorModel {
     }
 
     public Image getInputImage() {
+        if (this.history.isEmpty()) {
+            return null;
+        }
         return this.history.getFirst();
     }
 
+    public Image getCurrentImage() {
+        if (this.history.isEmpty()) {
+            return null;
+        }
+        return this.history.getLast();
+    }
+
     public void setInputImage(Image inputImage) {
+        this.history.clear();
+        this.filterNames.clear();
         history.add(inputImage);
         this.editor = new ImageEditor(inputImage);
+    }
+
+    public int getHistorySize() {
+        return this.history.size();
+    }
+
+    public List<String> getFilterNames() {
+        return Collections.unmodifiableList(this.filterNames);
+    }
+
+    public void reset() throws ImageNotFoundException {
+        if (this.history.isEmpty()) {
+            throw new ImageNotFoundException("No hay una imagen cargada para reiniciar.");
+        }
+        Image original = this.history.getFirst();
+        this.history.clear();
+        this.filterNames.clear();
+        this.history.add(original);
+        this.editor = new ImageEditor(original);
+    }
+
+    private void checkImageLoaded() throws ImageNotFoundException {
+        if (this.history.isEmpty()) {
+            throw new ImageNotFoundException("No se ha cargado ninguna imagen. Por favor cargue una imagen primero.");
+        }
     }
 
     public Image negativeFilter() throws ImageNotFoundException {
@@ -138,13 +178,18 @@ public class ImageEditorModel {
         return history.getLast();
     }
 
-    public Image undo() {
+    public Image undo() throws EmptyHistoryException {
         if (this.history.size() <= 1) {
-            return this.history.isEmpty() ? null : this.history.getFirst();
+            throw new EmptyHistoryException("El historial de filtros se encuentra vacío. No se puede deshacer.");
         }
 
         this.history.removeLast();
-        this.editor = new ImageEditor(this.history.getLast());
-        return this.history.getLast();
+        if (!this.filterNames.isEmpty()) {
+            this.filterNames.removeLast();
+        }
+
+        Image lastImage = getCurrentImage();
+        this.editor = new ImageEditor(lastImage);
+        return lastImage;
     }
 }

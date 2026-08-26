@@ -2,15 +2,23 @@ import java.awt.*;
 import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.util.List;
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
 public class ImageEditorView extends JFrame {
     JPanel mainPanel = new JPanel();
     JButton loadImageButton = new JButton("Load Image");
+    JButton saveImageButton = new JButton("Save Image");
+    JButton resetButton = new JButton("Reset Image");
+
     JFileChooser inputImageChooser = new JFileChooser();
-    FileNameExtensionFilter filter = new FileNameExtensionFilter("PNG Images", "png");
-    ImagePanel imagePanel;
+    JFileChooser saveImageChooser = new JFileChooser();
+    FileNameExtensionFilter filter = new FileNameExtensionFilter("Images (PNG, JPG)", "png", "jpg", "jpeg");
+
+    ImagePanel originalImagePanel = new ImagePanel();
+    ImagePanel currentImagePanel = new ImagePanel();
+
     JButton negativeFilterButton = new JButton("Negative");
     JButton grayscaleFilterButton = new JButton("Grayscale");
     JButton oneChannelRFilterButton = new JButton("One Channel (Red)");
@@ -22,6 +30,10 @@ public class ImageEditorView extends JFrame {
     JButton rotate90FilterButton = new JButton("Rotate 90 Degrees");
     JButton blurFilterButton = new JButton("Blur");
     JButton undoButton = new JButton("Undo");
+
+    DefaultListModel<String> historyListModel = new DefaultListModel<>();
+    JList<String> historyList = new JList<>(historyListModel);
+    JLabel historyCountLabel = new JLabel("History: 0 states");
 
     public ImageEditorView() {
         // We are extending the JFrame class, so we MUST call the parent constructor.
@@ -38,6 +50,8 @@ public class ImageEditorView extends JFrame {
         inputImageChooser.setFileFilter(filter);
 
         mainPanel.add(loadImageButton);
+        mainPanel.add(saveImageButton);
+        mainPanel.add(resetButton);
 
         // add the main panel and make the window visible
         mainPanel.add(negativeFilterButton);
@@ -58,6 +72,18 @@ public class ImageEditorView extends JFrame {
     // ################## A section to register action listeners ################
     public void addLoadImageListener(ActionListener listener) {
         loadImageButton.addActionListener(listener);
+    }
+
+    public void addSaveImageListener(ActionListener listener) {
+        saveImageButton.addActionListener(listener);
+    }
+
+    public void addResetImageListener(ActionListener listener) {
+        resetButton.addActionListener(listener);
+    }
+
+    public void addUndoListener(ActionListener listener) { 
+        undoButton.addActionListener(listener); 
     }
 
     public void addNegativeListener(ActionListener listener) {
@@ -160,16 +186,33 @@ public class ImageEditorView extends JFrame {
         }
     }
 
+    public File showSaveImageChooser() {
+        int returnVal = saveImageChooser.showSaveDialog(this);
+        return (returnVal == JFileChooser.APPROVE_OPTION) ? saveImageChooser.getSelectedFile() : null;
+    }
+
+    public void showOriginalImage(BufferedImage image) {
+        originalImagePanel.setImage(image);
+    }
+
+    public void showCurrentImage(BufferedImage image) {
+        currentImagePanel.setImage(image);
+    }
+
+    public void updateHistory(List<String> filtersApplied, int totalStates) {
+        historyListModel.clear();
+        for (int i = 0; i < filtersApplied.size(); i++) {
+            historyListModel.addElement((i + 1) + ". " + filtersApplied.get(i));
+        }
+        historyCountLabel.setText("Estados en historial: " + totalStates);
+    }
+
     public void showInfoDialog(String msg) {
         JOptionPane.showMessageDialog(
             this,
             msg,
             "Info",
             JOptionPane.INFORMATION_MESSAGE);
-    }
-
-    public void addUndoListener(ActionListener listener) {
-        undoButton.addActionListener(listener);
     }
 
     public void addInputImageChooserListener(ActionListener listener) {
@@ -187,13 +230,17 @@ public class ImageEditorView extends JFrame {
     }
 
     public void showInputImage(BufferedImage image) {
-        if (imagePanel != null) {
-            mainPanel.remove(imagePanel);
+        if (originalImagePanel != null) {
+            mainPanel.remove(originalImagePanel);
         }
 
-        imagePanel = new ImagePanel(image);
-        imagePanel.setPreferredSize(new Dimension(600, 400));
-        mainPanel.add(imagePanel);
+        originalImagePanel = new ImagePanel(image);
+        originalImagePanel.setPreferredSize(new Dimension(600, 400));
+        mainPanel.add(originalImagePanel);
         pack();
+    }
+
+    public void showErrorDialog(String msg) {
+        JOptionPane.showMessageDialog(this, msg, "Error", JOptionPane.ERROR_MESSAGE);
     }
 }

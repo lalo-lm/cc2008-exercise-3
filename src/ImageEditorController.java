@@ -10,6 +10,8 @@ public class ImageEditorController {
 
         // hookup action listeners
         this.view.addLoadImageListener(e -> handleLoadImage());
+        this.view.addSaveImageListener(e -> handleSaveImage());
+        this.view.addResetImageListener(e -> handleReset());
         this.view.addNegativeListener(e -> handleNegativeFilter());
         this.view.addGrayscaleListener(e -> handleGrayscaleFilter());
         this.view.addOneChannelRListener(e -> handleOneChannelRFilter());
@@ -39,6 +41,42 @@ public class ImageEditorController {
 
         // we updated the state of the model, we must re-draw the view layer
         refresh();
+    }
+
+    private void handleSaveImage() {
+        try {
+            Image current = model.getCurrentImage();
+            if (current == null) {
+                view.showErrorDialog("No hay ninguna imagen cargada para guardar.");
+                return;
+            }
+
+            File file = view.showSaveImageChooser();
+            if (file == null) return;
+
+            ImageUtils.save(current, file.getAbsolutePath());
+            view.showInfoDialog("Imagen guardada exitosamente en:\n" + file.getAbsolutePath());
+        } catch (Exception e) {
+            view.showErrorDialog("Error al guardar la imagen: " + e.getMessage());
+        }
+    }
+
+    private void handleReset() {
+        try {
+            model.reset();
+            refresh();
+        } catch (ImageNotFoundException e) {
+            view.showErrorDialog(e.getMessage());
+        }
+    }
+
+    private void handleUndo() {
+        try {
+            model.undo();
+            refresh();
+        } catch (EmptyHistoryException e) {
+            view.showErrorDialog(e.getMessage());
+        }
     }
 
     public void handleNegativeFilter() {
@@ -150,15 +188,11 @@ public class ImageEditorController {
         } 
     }
 
-    public void handleUndo() {
-        Image image = this.model.undo();
-        if (image != null) {
-            this.view.showInputImage(ImageUtils.toBufferedImage(image));
-        }
-    }
 
     // call the view to re-draw the application state
     private void refresh() {
-        view.showInputImage(ImageUtils.toBufferedImage(model.getInputImage()));
+        view.showOriginalImage(ImageUtils.toBufferedImage(model.getInputImage()));
+        view.showCurrentImage(ImageUtils.toBufferedImage(model.getCurrentImage()));
+        view.updateHistory(model.getFilterNames(), model.getHistorySize());
     }
 }
